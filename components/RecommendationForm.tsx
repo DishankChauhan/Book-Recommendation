@@ -1,62 +1,80 @@
-'use client'
-
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { searchBooks } from '@/lib/googleBooks'
-import { BookCard } from './BookCard'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
-interface Book {
-  id: string;
-  volumeInfo: {
-    title: string;
-    authors: string[];
-    description: string;
-    imageLinks?: {
-      thumbnail: string;
-    };
-  };
+interface RecommendationFormProps {
+  onSubmit: (genres: string[], authors: string[]) => void
 }
 
-export default function RecommendationForm() {
+export function RecommendationForm({ onSubmit }: RecommendationFormProps) {
   const { data: session } = useSession()
   const [genres, setGenres] = useState<string[]>([])
-  const [recommendations, setRecommendations] = useState<Book[]>([])
+  const [authors, setAuthors] = useState<string[]>([])
+  const [newGenre, setNewGenre] = useState('')
+  const [newAuthor, setNewAuthor] = useState('')
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleAddGenre = () => {
+    if (newGenre && !genres.includes(newGenre)) {
+      setGenres([...genres, newGenre])
+      setNewGenre('')
+    }
+  }
+
+  const handleAddAuthor = () => {
+    if (newAuthor && !authors.includes(newAuthor)) {
+      setAuthors([...authors, newAuthor])
+      setNewAuthor('')
+    }
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const results = await searchBooks(genres.join(' '))
-    setRecommendations(results)
+    onSubmit(genres, authors)
+  }
+
+  if (!session) {
+    return <p>Please sign in to set your preferences.</p>
   }
 
   return (
-    <div>
-      <form onSubmit={handleSubmit} className="mb-8">
-        <Input
-          type="text"
-          placeholder="Enter genres (comma-separated)"
-          className="border p-2 mr-2"
-          onChange={(e) => setGenres(e.target.value.split(',').map((g) => g.trim()))}
-        />
-        <Button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
-          Get Recommendations
-        </Button>
-      </form>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {recommendations.map((book) => (
-          <BookCard
-            key={book.id}
-            book={{
-              id: book.id,
-              title: book.volumeInfo.title,
-              authors: book.volumeInfo.authors || [],
-              description: book.volumeInfo.description || '',
-              imageUrl: book.volumeInfo.imageLinks?.thumbnail || '',
-            }}
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="genre">Favorite Genres</Label>
+        <div className="flex space-x-2">
+          <Input
+            id="genre"
+            value={newGenre}
+            onChange={(e) => setNewGenre(e.target.value)}
+            placeholder="Add a genre"
           />
-        ))}
+          <Button type="button" onClick={handleAddGenre}>Add</Button>
+        </div>
+        <ul className="mt-2">
+          {genres.map((genre) => (
+            <li key={genre} className="inline-block bg-primary text-primary-foreground rounded-full px-3 py-1 text-sm mr-2 mb-2">{genre}</li>
+          ))}
+        </ul>
       </div>
-    </div>
+      <div>
+        <Label htmlFor="author">Favorite Authors</Label>
+        <div className="flex space-x-2">
+          <Input
+            id="author"
+            value={newAuthor}
+            onChange={(e) => setNewAuthor(e.target.value)}
+            placeholder="Add an author"
+          />
+          <Button type="button" onClick={handleAddAuthor}>Add</Button>
+        </div>
+        <ul className="mt-2">
+          {authors.map((author) => (
+            <li key={author} className="inline-block bg-secondary text-secondary-foreground rounded-full px-3 py-1 text-sm mr-2 mb-2">{author}</li>
+          ))}
+        </ul>
+      </div>
+      <Button type="submit">Save Preferences</Button>
+    </form>
   )
 }
